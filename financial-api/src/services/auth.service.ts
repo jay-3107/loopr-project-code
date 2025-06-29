@@ -1,7 +1,8 @@
 import User, { IUser } from '../models/user.model';
 import { generateToken } from '../utils/jwt.utils';
 import mongoose from 'mongoose';
-
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 interface AuthResponse {
   user: {
     _id: string;
@@ -50,29 +51,36 @@ export const registerUser = async (userData: RegisterInput): Promise<AuthRespons
   };
 };
 
-export const loginUser = async (credentials: LoginInput): Promise<AuthResponse> => {
-  // Find user by username
-  const user = await User.findOne({ username: credentials.username });
+export const loginUser = async ({ email, password }: { email: string, password: string }) => {
+  // Find user by email instead of username
+  const user = await User.findOne({ email });
+  
   if (!user) {
-    throw new Error('Invalid credentials');
+    throw new Error('Invalid email or password');
   }
   
-  // Check password
-  const isPasswordValid = await user.comparePassword(credentials.password);
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  
   if (!isPasswordValid) {
-    throw new Error('Invalid credentials');
+    throw new Error('Invalid email or password');
   }
   
-  const token = generateToken(user);
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET || 'fallback_secret',
+    { expiresIn: '24h' }
+  );
   
   return {
+    token,
     user: {
-      _id: user._id.toString(),
+      _id: user._id,
       username: user.username,
       email: user.email,
       role: user.role
-    },
-    token
+    }
   };
 };
 

@@ -3,16 +3,27 @@ import { registerUser, loginUser, getUserById } from '../services/auth.service';
 import { validateRequest } from '../middlewares/error.middleware';
 import { body, validationResult } from 'express-validator';
 
-// Validation rules
+// Updated validation rules for login - using email instead of username
 export const loginValidation = [
-  body('username').notEmpty().withMessage('Username is required'),
-  body('password').notEmpty().withMessage('Password is required')
+  body('email')
+    .isEmail()
+    .withMessage('Valid email is required'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
 ];
 
+// Registration validation remains the same but email is now more important
 export const registerValidation = [
-  body('username').notEmpty().withMessage('Username is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+  body('username')
+    .notEmpty()
+    .withMessage('Username is required'),
+  body('email')
+    .isEmail()
+    .withMessage('Valid email is required'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
 ];
 
 // Controller methods
@@ -37,6 +48,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// Updated login method to use email instead of username
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -46,7 +58,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
     
     const credentials = {
-      username: req.body.username,
+      email: req.body.email,
       password: req.body.password
     };
     
