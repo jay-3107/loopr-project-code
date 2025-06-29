@@ -148,3 +148,84 @@ export const getRevenueExpenseChart = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error fetching chart data' });
   }
 };
+
+/**
+ * Get category breakdown data for charts
+ * Returns transaction amounts grouped by category
+ */
+export const getCategoryBreakdown = async (req: Request, res: Response) => {
+  try {
+    // Check user authentication
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    
+    const userId = (req.user as TokenPayload).userId;
+    
+    // Get optional type filter from query params (income/expense)
+    const { type } = req.query;
+    const typeFilter = type ? { type: type as string } : {};
+    
+    // Get optional date range from query params
+    const { startDate, endDate } = req.query;
+    
+    // Create properly typed date filter
+    let dateFilter: { date?: { $gte?: Date, $lte?: Date } } = {};
+    
+    if (startDate || endDate) {
+      dateFilter.date = {};
+      
+      if (startDate) {
+        dateFilter.date.$gte = new Date(startDate as string);
+      }
+      
+      if (endDate) {
+        dateFilter.date.$lte = new Date(endDate as string);
+      }
+    }
+    
+    // Aggregate transactions by category
+    const categoryData = await Transaction.aggregate([
+      { 
+        $match: { 
+          userId: userId,
+          ...typeFilter,
+          ...dateFilter
+        } 
+      },
+      {
+        $group: {
+          _id: '$category',
+          total: { $sum: '$amount' }
+        }
+      },
+      {
+        $project: {
+          category: '$_id',
+          amount: '$total',
+          _id: 0
+        }
+      },
+      { $sort: { amount: -1 } }
+    ]);
+    
+    // If no data was found, return an empty array
+    if (!categoryData.length) {
+      return res.json([]);
+    }
+    
+    // Calculate total for percentage calculations
+    const totalAmount = categoryData.reduce((sum, item) => sum + item.amount, 0);
+    
+    // Add percentage to each category
+    const enhancedData = categoryData.map(item => ({
+      ...item,
+      percentage: parseFloat(((item.amount / totalAmount) * 100).toFixed(2))
+    }));
+    
+    res.json(enhancedData);
+  } catch (error) {
+    console.error('Error fetching category breakdown data:', error);
+    res.status(500).json({ message: 'Error fetching category breakdown data' });
+  }
+};

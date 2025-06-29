@@ -14,4 +14,7 @@ router.get('/summary', dashboardController.getSummary);
 // Revenue vs Expense chart data
 router.get('/charts/revenue-expense', dashboardController.getRevenueExpenseChart);
 
+// Add the new category breakdown endpoint
+router.get('/charts/category-breakdown', dashboardController.getCategoryBreakdown);
+
 export default router;

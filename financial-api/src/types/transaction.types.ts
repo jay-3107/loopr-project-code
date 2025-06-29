@@ -17,15 +17,15 @@ export interface TransactionResponse extends TransactionData {
 }
 
 export interface TransactionFilter {
-  userId?: string;
-  startDate?: Date | string;
-  endDate?: Date | string;
+  userId: string;
+  startDate?: string;
+  endDate?: string;
   minAmount?: number;
   maxAmount?: number;
   type?: 'income' | 'expense';
   category?: string;
   status?: 'completed' | 'pending' | 'cancelled';
-  search?: string;
+  search?: string; // Add this line for search functionality
 }
 
 export interface PaginationOptions {
@@ -38,9 +38,11 @@ export interface PaginationOptions {
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
-    total: number;
+  total: number;
     page: number;
     limit: number;
     pages: number;
+    hasNextPage?: boolean;
+    hasPrevPage?: boolean;
   };
 }

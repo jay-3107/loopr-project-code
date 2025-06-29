@@ -1,7 +1,10 @@
+// src/controllers/transaction.controller.ts
+
 import { Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import * as TransactionService from '../services/transaction.service';
 import { PaginationOptions, TransactionFilter } from '../types/transaction.types';
+import { TokenPayload } from '../utils/jwt.utils';
 
 // Validation rules
 export const createTransactionValidation = [
@@ -158,7 +161,11 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
     if (req.query.type) filter.type = req.query.type as 'income' | 'expense';
     if (req.query.category) filter.category = req.query.category as string;
     if (req.query.status) filter.status = req.query.status as 'completed' | 'pending' | 'cancelled';
-    if (req.query.search) filter.search = req.query.search as string;
+    
+    // Add text search functionality
+    if (req.query.search) {
+      filter.search = req.query.search as string;
+    }
     
     const result = await TransactionService.getTransactions(filter, paginationOptions);
     res.status(200).json(result);

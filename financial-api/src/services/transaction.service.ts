@@ -1,3 +1,4 @@
+// src/services/transaction.service.ts
 import Transaction, { ITransaction } from '../models/transaction.model';
 import { 
   TransactionData, 
@@ -67,23 +68,25 @@ export const getTransactions = async (
   }
   
   // Date range filter
-  if (filter.startDate) {
-    query.date = { $gte: new Date(filter.startDate) };
-  }
-  
-  if (filter.endDate) {
-    if (!query.date) query.date = {};
-    query.date.$lte = new Date(filter.endDate);
+  if (filter.startDate || filter.endDate) {
+    query.date = {};
+    if (filter.startDate) {
+      query.date.$gte = new Date(filter.startDate);
+    }
+    if (filter.endDate) {
+      query.date.$lte = new Date(filter.endDate);
+    }
   }
   
   // Amount range filter
-  if (filter.minAmount !== undefined) {
-    query.amount = { $gte: filter.minAmount };
-  }
-  
-  if (filter.maxAmount !== undefined) {
-    if (!query.amount) query.amount = {};
-    query.amount.$lte = filter.maxAmount;
+  if (filter.minAmount !== undefined || filter.maxAmount !== undefined) {
+    query.amount = {};
+    if (filter.minAmount !== undefined) {
+      query.amount.$gte = filter.minAmount;
+    }
+    if (filter.maxAmount !== undefined) {
+      query.amount.$lte = filter.maxAmount;
+    }
   }
   
   // Type filter (income/expense)
@@ -101,13 +104,20 @@ export const getTransactions = async (
     query.status = filter.status;
   }
   
-  // Search filter (search in description and category)
+  // Enhanced search functionality across multiple fields
   if (filter.search) {
-    const searchRegex = new RegExp(filter.search, 'i');
+    // Create array for $or conditions
     query.$or = [
-      { description: searchRegex },
-      { category: searchRegex }
+      { description: { $regex: filter.search, $options: 'i' } },
+      { category: { $regex: filter.search, $options: 'i' } },
+      { notes: { $regex: filter.search, $options: 'i' } },
+      { status: { $regex: filter.search, $options: 'i' } }
     ];
+    
+    // Also search for amounts if the search query is numeric
+    if (!isNaN(Number(filter.search))) {
+      query.$or.push({ amount: Number(filter.search) });
+    }
   }
   
   // Calculate pagination
@@ -131,17 +141,21 @@ export const getTransactions = async (
     Transaction.countDocuments(query)
   ]);
   
-  // Calculate total pages
-  const pages = Math.ceil(total / limit);
+  // Calculate pagination metadata
+  const totalPages = Math.ceil(total / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
   
-  // Return paginated result
+  // Return paginated result in the format your application expects
   return {
     data: transactions,
     pagination: {
       total,
       page,
       limit,
-      pages
+      pages: totalPages,
+      hasNextPage,
+      hasPrevPage
     }
   };
 };
