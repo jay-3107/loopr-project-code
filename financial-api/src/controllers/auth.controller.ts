@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { registerUser, loginUser, getUserById } from '../services/auth.service';
+import * as authService from '../services/auth.service';
 import { validateRequest } from '../middlewares/error.middleware';
 import { body, validationResult } from 'express-validator';
 
@@ -49,23 +50,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 };
 
 // Updated login method to use email instead of username
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({ errors: errors.array() });
-      return;
+    const { email, password } = req.body;
+    
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
     
-    const credentials = {
-      email: req.body.email,
-      password: req.body.password
-    };
+    // Login user (this will now also create sample data if needed)
+    const result = await authService.loginUser(email, password);
     
-    const result = await loginUser(credentials);
-    res.status(200).json(result);
-  } catch (error: any) {
-    res.status(401).json({ message: error.message });
+    // Return token and user
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
   }
 };
 

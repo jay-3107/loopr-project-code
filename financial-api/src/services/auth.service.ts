@@ -2,7 +2,11 @@ import User, { IUser } from '../models/user.model';
 import { generateToken } from '../utils/jwt.utils';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
+
+import { createSampleTransactionsForUser } from './sampleData.service';
+import { config } from '../config/env';
+
 interface AuthResponse {
   user: {
     _id: string;
@@ -38,7 +42,20 @@ export const registerUser = async (userData: RegisterInput): Promise<AuthRespons
   const user = new User(userData);
   await user.save();
   
+  // Generate token
   const token = generateToken(user);
+  
+  // Create sample transactions for the newly registered user
+  try {
+    console.log(`Creating sample data for new user: ${user._id}`);
+    await createSampleTransactionsForUser(user._id.toString());
+    // Update user to mark sample data as created
+    await User.findByIdAndUpdate(user._id, { sampleDataCreated: true });
+    console.log(`Sample data created successfully for user: ${user._id}`);
+  } catch (error) {
+    console.error('Error creating sample data during registration:', error);
+    // We still want to proceed with registration even if sample data creation fails
+  }
   
   return {
     user: {
@@ -51,35 +68,50 @@ export const registerUser = async (userData: RegisterInput): Promise<AuthRespons
   };
 };
 
-export const loginUser = async ({ email, password }: { email: string, password: string }) => {
-  // Find user by email instead of username
+export const loginUser = async (email: string, password: string) => {
+  // Find user by email
   const user = await User.findOne({ email });
   
   if (!user) {
     throw new Error('Invalid email or password');
   }
   
-  // Verify password
-  const isPasswordValid = await bcrypt.compare(password, user.password);
+  // Check password
+  const isMatch = await user.comparePassword(password);
   
-  if (!isPasswordValid) {
+  if (!isMatch) {
     throw new Error('Invalid email or password');
   }
   
-  // Generate JWT token
+  // Generate JWT token with type assertion to fix TypeScript error
   const token = jwt.sign(
-    { userId: user._id, email: user.email, role: user.role },
-    process.env.JWT_SECRET || 'fallback_secret',
-    { expiresIn: '24h' }
+    { userId: user._id.toString(), email: user.email, role: user.role },
+    config.jwtSecret as Secret,
+    { expiresIn: config.jwtExpiresIn } as SignOptions
   );
   
+  // Create sample transactions if this is a new user or sample data wasn't created
+  if (!user.sampleDataCreated) {
+    try {
+      console.log(`Creating sample data for existing user: ${user._id}`);
+      await createSampleTransactionsForUser(user._id.toString());
+      // Update user to mark sample data as created
+      await User.findByIdAndUpdate(user._id, { sampleDataCreated: true });
+      console.log(`Sample data created successfully for user: ${user._id}`);
+    } catch (error) {
+      console.error('Error creating sample data during login:', error);
+      // We still want to proceed with login even if sample data creation fails
+    }
+  }
+  
+  // Return user data and token
   return {
     token,
     user: {
       _id: user._id,
       username: user.username,
       email: user.email,
-      role: user.role
+      role: user.role,
     }
   };
 };

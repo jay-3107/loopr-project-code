@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
+// import img from "login_img" ;
 
 export function LoginForm({
   className,
@@ -17,38 +18,37 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+  // In your login form's handleSubmit function:
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
 
-    try {
-      const response = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
+  try {
+    const response = await axios.post("http://localhost:5000/api/auth/login", {
+      email,
+      password,
+    });
 
-      // Store token in localStorage
-      localStorage.setItem("token", response.data.token);
-      
-      // Store user info if needed
-      if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-      }
-      
-      // Redirect to dashboard
-      navigate("/dashboard");
-    } catch (err: any) {
-      if (err.response) {
-        setError(err.response.data.message || "Invalid email or password");
-      } else {
-        setError("Network error. Please try again later.");
-      }
-      console.error("Login error:", err);
-    } finally {
-      setIsLoading(false);
+    console.log('Login response:', response.data);
+    
+    // Store token in localStorage
+    localStorage.setItem("token", response.data.token);
+    console.log('Token stored:', response.data.token);
+    
+    // Store user info
+    if (response.data.user) {
+      localStorage.setItem("user", JSON.stringify(response.data.user));
     }
-  };
+    
+    // Redirect to dashboard
+    navigate("/dashboard");
+  } catch (err: any) {
+    // Error handling
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -145,9 +145,9 @@ export function LoginForm({
           </form>
           <div className="bg-muted relative hidden md:block">
             <img
-              src="https://images.unsplash.com/photo-1460925895917-afddc27a96ee?q=80&w=1000&auto=format&fit=crop"
+              src="/login_img.jpg"
               alt="Financial Dashboard"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2]"
+              className="absolute inset-0 h-full w-full objecapt-cover dark:brightness-[0.2]"
             />
           </div>
         </CardContent>

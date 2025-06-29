@@ -1,44 +1,52 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import SignUp from './pages/SignUp';
 import LoginPage from './pages/LoginPage';
+import SignUp from './pages/SignUp';
+import Dashboard from './pages/Dashboard';
 import { useEffect, useState } from 'react';
-import './App.css';
+// App.tsx
+import { AuthDebug } from './components/AuthDebug';
 
-// Protected route component for future Dashboard implementation
+// Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem('token');
-  
-  if (!token) {
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (token) {
+      setAuthenticated(true);
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+
+  if (!authenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    // Basic initialization check
-    setTimeout(() => setIsLoading(false), 500);
-  }, []);
-  
-  if (isLoading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-  
   return (
     <Router>
+      {/* {process.env.NODE_ENV === 'development' && <AuthDebug />} */}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUp />} />
-        {/* Dashboard will be added later */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );
